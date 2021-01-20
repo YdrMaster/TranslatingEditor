@@ -14,19 +14,60 @@
             <RowDefinition Height="Auto" />
             <RowDefinition />
         </Grid.RowDefinitions>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto" />
-            <ColumnDefinition />
-        </Grid.ColumnDefinitions>
-        <Button
-            HorizontalAlignment="Center"
-            VerticalAlignment="Center"
-            Click="Button_Click"
-            Content="选取文件" />
-        <ListView Grid.Row="1" />
-        <TextBlock
-            x:Name="TitleBlock"
-            Grid.Column="1"
-            VerticalAlignment="Center" />
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition />
+            </Grid.ColumnDefinitions>
+
+            <TextBlock
+                Margin="4,0"
+                VerticalAlignment="Center"
+                FontSize="16"
+                FontStyle="Italic"
+                Text="{x:Bind _view.Title, Mode=TwoWay}" />
+            <Button
+                Grid.Column="1"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Center"
+                Click="Source_Click"
+                Content="{x:Bind _view.Source, Mode=OneWay}" />
+            <FontIcon
+                Grid.Column="2"
+                Margin="4,0"
+                FontFamily="Segoe MDL2 Assets"
+                Glyph="&#xE76C;" />
+            <Button
+                Grid.Column="3"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Center"
+                Click="Target_Click"
+                Content="{x:Bind _view.Target, Mode=OneWay}" />
+        </Grid>
+        <Grid Grid.Row="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" MaxWidth="320" />
+                <ColumnDefinition Width="3*" />
+            </Grid.ColumnDefinitions>
+            <ListView Grid.RowSpan="2" Margin="4" />
+            <TextBox
+                Grid.Row="0"
+                Grid.Column="1"
+                Margin="4"
+                PlaceholderText="Name" />
+            <TextBox
+                Grid.Row="1"
+                Grid.Column="1"
+                Margin="4"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                PlaceholderText="Description" />
+        </Grid>
     </Grid>
 </Page>
