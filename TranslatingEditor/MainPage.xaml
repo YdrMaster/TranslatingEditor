@@ -23,7 +23,7 @@
             </Grid.ColumnDefinitions>
 
             <TextBlock
-                Margin="4,0"
+                Margin="8,0"
                 VerticalAlignment="Center"
                 FontSize="16"
                 FontStyle="Italic"
@@ -33,7 +33,7 @@
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Center"
                 Click="Source_Click"
-                Content="{x:Bind _view.Source, Mode=OneWay}" />
+                Content="{x:Bind _view.SourceFileName, Mode=OneWay}" />
             <FontIcon
                 Grid.Column="2"
                 Margin="4,0"
@@ -44,15 +44,16 @@
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Center"
                 Click="Target_Click"
-                Content="{x:Bind _view.Target, Mode=OneWay}" />
+                Content="{x:Bind _view.TargetFileName, Mode=OneWay}"
+                IsEnabled="{x:Bind _view.SourceLoaded, Mode=OneWay}" />
         </Grid>
-        <Grid Grid.Row="1">
+        <Grid Grid.Row="1" Margin="0,8,0,0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition />
             </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" MaxWidth="320" />
+                <ColumnDefinition Width="*" MaxWidth="240" />
                 <ColumnDefinition Width="3*" />
             </Grid.ColumnDefinitions>
             <ListView
@@ -61,7 +62,7 @@
                 ItemsSource="{x:Bind _sourceItems, Mode=OneWay}"
                 SelectionChanged="ListView_SelectionChanged">
                 <ListView.ItemTemplate>
-                    <DataTemplate x:DataType="local:SourceItem">
+                    <DataTemplate x:DataType="local:SpellItem">
                         <TextBlock Text="{x:Bind Id}" />
                     </DataTemplate>
                 </ListView.ItemTemplate>
@@ -71,6 +72,7 @@
                 Grid.Row="0"
                 Grid.Column="1"
                 Margin="4"
+                IsReadOnly="{x:Bind _view.IdNotMatch, Mode=OneWay}"
                 PlaceholderText="Name" />
             <TextBox
                 x:Name="DescriptionBox"
@@ -79,6 +81,7 @@
                 Margin="4"
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch"
+                IsReadOnly="{x:Bind _view.IdNotMatch, Mode=OneWay}"
                 PlaceholderText="Description"
                 TextWrapping="Wrap" />
         </Grid>
