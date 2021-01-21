@@ -1,16 +1,28 @@
 ﻿using System;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Linq;
+using System.Threading;
 using Windows.Storage.Pickers;
 using Windows.UI.Core;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 
 namespace TranslatingEditor {
+    public class SourceItem {
+        public string Id;
+        public string Name;
+        public string Description;
+    }
+
     public sealed partial class MainPage : Page {
         private readonly ViewMedel _view = new ViewMedel() {
             Source = "选取源文件",
             Target = "选取目标文件",
         };
+
+        private readonly ObservableCollection<SourceItem> _sourceItems
+            = new ObservableCollection<SourceItem>();
 
         public MainPage() => InitializeComponent();
 
@@ -48,31 +60,47 @@ namespace TranslatingEditor {
         }
 
         private void ParseMapSource(ReadOnlySpan<char> text) {
-            if (text[0] != '{' || text[text.Length - 1] != '}') {
-                Debug.WriteLine("Parse error(1).");
-                return;
-            }
-            text = text.Slice(1, text.Length - 2).Trim();
+            text = SliceContent(text, "{", "}");
 
-            var i = text.IndexOf('\n');
-            var line = text.Slice(0, i).TrimEnd();
-
-            const string LABEL = "\"label\": \"";
-            if (!line.StartsWith(LABEL.AsSpan()) || !line.EndsWith("\",".AsSpan())) {
-                Debug.WriteLine("Parse error(2).");
-                return;
-            }
-            var title = line.Slice(LABEL.Length, line.Length - LABEL.Length - 2).ToString();
+            var line = SplitHead(ref text);
+            var title = SliceContent(line, "\"label\": \"", "\",").ToString();
             _ = Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => _view.Title = title);
 
-            const string ENTRIES = "\"entries\": [";
-            var others = text.Slice(i + 1).TrimStart();
-            if (!others.StartsWith(ENTRIES.AsSpan()) || !others.EndsWith("]".AsSpan())) {
-                Debug.WriteLine("Parse error(3).");
-                return;
+            text = SliceContent(text, "\"entries\": [", "]");
+            _ = Dispatcher.RunAsync(CoreDispatcherPriority.High, () => _sourceItems.Clear());
+
+            while (text.Length > 5) {
+                _ = SplitHead(ref text);
+                var item = new SourceItem {
+                    Id = SliceContent(SplitHead(ref text), "\"id\": \"", "\",").ToString(),
+                    Name = SliceContent(SplitHead(ref text), "\"name\": \"", "\",").ToString(),
+                    Description = SliceContent(SplitHead(ref text), "\"description\": \"", "\"").ToString(),
+                };
+                _ = SplitHead(ref text);
+                _ = Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => _sourceItems.Add(item));
             }
 
-            Debug.WriteLine("Done.");
+            Debug.WriteLine(text.ToString());
+        }
+
+        private void ListView_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            if (e.AddedItems.Count != 1 || !(e.AddedItems.First() is SourceItem item))
+                return;
+            NameBox.Text = item.Name;
+            DescriptionBox.Text = item.Description;
+        }
+
+        private static ReadOnlySpan<char> SplitHead(ref ReadOnlySpan<char> source, char splitter = '\n') {
+            var i = source.IndexOf(splitter);
+            var head = source.Slice(0, i).TrimEnd();
+            source = source.Slice(i + 1).TrimStart();
+            return head;
+        }
+
+        private static ReadOnlySpan<char> SliceContent(ReadOnlySpan<char> source, string head, string tail) {
+            Debug.Assert(source.StartsWith(head.AsSpan()));
+            Debug.Assert(source.EndsWith(tail.AsSpan()));
+            return source.Slice(head.Length, source.Length - head.Length - tail.Length).Trim();
         }
 
         private class ViewMedel : Bindable {

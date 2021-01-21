@@ -55,19 +55,32 @@
                 <ColumnDefinition Width="*" MaxWidth="320" />
                 <ColumnDefinition Width="3*" />
             </Grid.ColumnDefinitions>
-            <ListView Grid.RowSpan="2" Margin="4" />
+            <ListView
+                Grid.RowSpan="2"
+                Margin="4"
+                ItemsSource="{x:Bind _sourceItems, Mode=OneWay}"
+                SelectionChanged="ListView_SelectionChanged">
+                <ListView.ItemTemplate>
+                    <DataTemplate x:DataType="local:SourceItem">
+                        <TextBlock Text="{x:Bind Id}" />
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
             <TextBox
+                x:Name="NameBox"
                 Grid.Row="0"
                 Grid.Column="1"
                 Margin="4"
                 PlaceholderText="Name" />
             <TextBox
+                x:Name="DescriptionBox"
                 Grid.Row="1"
                 Grid.Column="1"
                 Margin="4"
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch"
-                PlaceholderText="Description" />
+                PlaceholderText="Description"
+                TextWrapping="Wrap" />
         </Grid>
     </Grid>
 </Page>
