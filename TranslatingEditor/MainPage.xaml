@@ -68,21 +68,23 @@
                 </ListView.ItemTemplate>
             </ListView>
             <TextBox
-                x:Name="NameBox"
                 Grid.Row="0"
                 Grid.Column="1"
                 Margin="4"
                 IsReadOnly="{x:Bind _view.IdNotMatch, Mode=OneWay}"
-                PlaceholderText="Name" />
+                PlaceholderText="Name"
+                Text="{x:Bind _view.FocusName, Mode=TwoWay}" />
             <TextBox
-                x:Name="DescriptionBox"
                 Grid.Row="1"
                 Grid.Column="1"
                 Margin="4"
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch"
+                AcceptsReturn="True"
+                FontFamily="Cascadia Code"
                 IsReadOnly="{x:Bind _view.IdNotMatch, Mode=OneWay}"
                 PlaceholderText="Description"
+                Text="{x:Bind _view.FocusDescription, Mode=TwoWay}"
                 TextWrapping="Wrap" />
         </Grid>
     </Grid>

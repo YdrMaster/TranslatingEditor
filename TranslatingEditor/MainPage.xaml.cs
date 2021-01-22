@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using Windows.Foundation;
 using Windows.Storage;
 using Windows.Storage.Pickers;
@@ -20,7 +20,7 @@ namespace TranslatingEditor {
     }
 
     public sealed partial class MainPage : Page {
-        private readonly ViewMedel _view = new ViewMedel();
+        private readonly ViewModel _view = new ViewModel();
 
         private readonly ObservableCollection<SpellItem> _sourceItems
             = new ObservableCollection<SpellItem>();
@@ -31,12 +31,6 @@ namespace TranslatingEditor {
         public MainPage() => InitializeComponent();
 
         private void Source_Click(object sender, RoutedEventArgs e) {
-            var locationPromptDialog = new ContentDialog {
-                Title = "1",
-                Content = "2",
-                CloseButtonText = "好的",
-            };
-
             var picker = new FileOpenPicker();
             picker.FileTypeFilter.Add(".json");
             picker.FileTypeFilter.Add(".txt");
@@ -59,7 +53,6 @@ namespace TranslatingEditor {
                                 Content = $"源文件中含有不正确的 json 格式，导致解析失败。已解析出 {_sourceItems.Count} 个法术。尚未解析的将被丢弃。建议修复并重新加载源文件。",
                                 CloseButtonText = "好的",
                             }.ShowAsync();
-                            _view.SourceLoaded=false;
                         });
                 });
         }
@@ -108,24 +101,24 @@ namespace TranslatingEditor {
 
         private bool ParseSource(ReadOnlySpan<char> text) {
             try {
-                text = SliceContent(text, "{", "}");
+                text = text.SliceContent("{", "}");
 
-                var line = SplitHead(ref text);
-                var title = SliceContent(line, "\"label\": \"", "\",").ToString();
+                var line = Functions.SplitHead(ref text);
+                var title = line.SliceContent("\"label\": \"", "\",").ToString();
                 _ = ModifyUI(() => _view.Title = title);
 
-                text = SliceContent(text, "\"entries\": [", "]");
+                text = text.SliceContent("\"entries\": [", "]");
                 while (text.Length > 5) {
-                    _ = SplitHead(ref text);
+                    _ = Functions.SplitHead(ref text);
                     var item = new SpellItem {
-                        Id = SliceContent(SplitHead(ref text), "\"id\": \"", "\",").ToString(),
-                        Name = SliceContent(SplitHead(ref text), "\"name\": \"", "\",").ToString(),
-                        Description = SliceContent(SplitHead(ref text), "\"description\": \"", "\"").ToString(),
+                        Id = Functions.SplitHead(ref text).SliceContent("\"id\": \"", "\",").ToString(),
+                        Name = Functions.SplitHead(ref text).SliceContent("\"name\": \"", "\",").ToString(),
+                        Description = Functions.SplitHead(ref text).SliceContent("\"description\": \"", "\"").ToString(),
                     };
-                    _ = SplitHead(ref text);
+                    _ = Functions.SplitHead(ref text);
                     _ = ModifyUI(() => _sourceItems.Add(item));
                 }
-            } catch (ParseFaildException) {
+            } catch (Functions.ParseFaildException) {
                 return false;
             }
 
@@ -137,25 +130,24 @@ namespace TranslatingEditor {
 
         private bool ParseTarget(ReadOnlySpan<char> text) {
             try {
-                text = SliceContent(text, "{", "}");
+                text = text.SliceContent("{", "}");
 
-                var line = SplitHead(ref text);
-                var title = SliceContent(line, "\"label\": \"", "\",").ToString();
-                if (title != _view.Title)
-                    return false;
+                var line = Functions.SplitHead(ref text);
+                var title = line.SliceContent("\"label\": \"", "\",").ToString();
+                if (title != _view.Title) return false;
 
-                text = SliceContent(text, "\"entries\": [", "]");
+                text = text.SliceContent("\"entries\": [", "]");
                 while (text.Length > 5) {
-                    _ = SplitHead(ref text);
+                    _ = Functions.SplitHead(ref text);
                     var item = new SpellItem {
-                        Id = SliceContent(SplitHead(ref text), "\"id\": \"", "\",").ToString(),
-                        Name = SliceContent(SplitHead(ref text), "\"name\": \"", "\",").ToString(),
-                        Description = SliceContent(SplitHead(ref text), "\"description\": \"", "\"").ToString(),
+                        Id = Functions.SplitHead(ref text).SliceContent("\"id\": \"", "\",").ToString(),
+                        Name = Functions.SplitHead(ref text).SliceContent("\"name\": \"", "\",").ToString(),
+                        Description = Functions.SplitHead(ref text).SliceContent("\"description\": \"", "\"").ToString(),
                     };
-                    _ = SplitHead(ref text);
-                    _targetItems.Add(item.Id, item);
+                    _ = Functions.SplitHead(ref text);
+                    _targetItems[item.Id] = item;
                 }
-            } catch (ParseFaildException) {
+            } catch (Functions.ParseFaildException) {
                 return false;
             }
 
@@ -179,67 +171,37 @@ namespace TranslatingEditor {
         }
 
         private void ListView_SelectionChanged(object sender, SelectionChangedEventArgs e) {
-            if (e.AddedItems.Count == 1 && e.AddedItems.First() is SpellItem item) {
-                if (_view.IdNotMatch) {
-                    NameBox.Text = item.Name;
-                    DescriptionBox.Text = item.Description;
-                } else {
-                    item = _targetItems[item.Id];
-                    NameBox.Text = item.Name;
-                    DescriptionBox.Text = item.Description;
-                }
-            }
+            if (e.AddedItems.Count == 1 && e.AddedItems.First() is SpellItem item)
+                _view.SetFocus(_view.IdNotMatch ? item : _targetItems[item.Id]);
         }
 
         private IAsyncAction ModifyUI(DispatchedHandler task)
             => Dispatcher.RunAsync(CoreDispatcherPriority.Normal, task);
 
-        private static ReadOnlySpan<char> SplitHead(ref ReadOnlySpan<char> source, char splitter = '\n') {
-            var i = source.IndexOf(splitter);
-            if (i == source.Length - 1 || i < 0) {
-                var head = source;
-                source = ReadOnlySpan<char>.Empty;
-                return head;
-            } else {
-                var head = source.Slice(0, i).TrimEnd();
-                source = source.Slice(i + 1).TrimStart();
-                return head;
-            }
-        }
-
-        private static ReadOnlySpan<char> SliceContent(ReadOnlySpan<char> source, string head, string tail) {
-            if (source.StartsWith(head.AsSpan()) && source.EndsWith(tail.AsSpan()))
-                return source.Slice(head.Length, source.Length - head.Length - tail.Length).Trim();
-            throw new ParseFaildException();
-        }
-
-        private class ParseFaildException : Exception { }
-
-        private class ViewMedel : Bindable {
+        private class ViewModel : Bindable {
             private string _title;
             private bool _sourceLoaded = false;
-            private bool _idNotMatch = false;
-            private string _sourceFileName = "选取源文件";
-            private string _targetFileName = "选取目标文件";
+            private bool _idNotMatch = true;
+            private string _sourceFileName = "选择原文文件";
+            private string _targetFileName = "选择译文文件";
+
+            private FocusCache _cache = null;
 
             public string Title {
                 get => _title;
                 set => SetProperty(ref _title, value);
             }
 
-            public bool SourceLoaded {
-                get => _sourceLoaded;
-                set {
-                    if (!value && SetProperty(ref _sourceLoaded, value))
-                        SetProperty(ref _sourceFileName, "选取源文件", nameof(SourceFileName));
-                }
-            }
+            public bool SourceLoaded => _sourceLoaded;
 
             public string SourceFileName => _sourceFileName;
 
             public bool IdNotMatch {
                 get => _idNotMatch;
-                set => SetProperty(ref _idNotMatch, value);
+                set {
+                    if (SetProperty(ref _idNotMatch, value) && !value)
+                        SetProperty(ref _targetFileName, "选择译文文件", nameof(SourceFileName));
+                }
             }
 
             public string TargetFileName {
@@ -250,6 +212,109 @@ namespace TranslatingEditor {
             public void LoadSource(string name) {
                 SetProperty(ref _sourceFileName, name, nameof(SourceFileName));
                 SetProperty(ref _sourceLoaded, true, nameof(SourceLoaded));
+            }
+
+            public string FocusName {
+                get => _cache?.Name ?? "";
+                set {
+                    if (_cache == null || _cache.Name == value)
+                        return;
+                    _cache.Name = value;
+                    Notify(nameof(FocusName));
+                }
+            }
+
+            public string FocusDescription {
+                get => _cache?.Description ?? "";
+                set {
+                    if (_cache == null || _cache.Description == value)
+                        return;
+                    _cache.Description = value;
+                    Notify(nameof(FocusDescription));
+                }
+            }
+
+            public void SetFocus(SpellItem item) {
+                _cache = new FocusCache(item);
+                Notify(nameof(FocusName));
+                Notify(nameof(FocusDescription));
+            }
+        }
+
+        private class FocusCache {
+            private readonly string _id;
+            private string _description;
+
+            public FocusCache(SpellItem item) {
+                _id = item.Id;
+                Name = item.Name;
+                _description = item.Description;
+                Debug.Assert(_description.StartsWith("<p>"));
+            }
+
+            public string Name { get; set; }
+
+            public string Description {
+                get {
+                    var builder = new StringBuilder();
+                    var text = _description.AsSpan(3);
+                    var labels = new Stack<string>();
+                    labels.Push("p");
+
+                    while (!text.IsEmpty) {
+                        var lb = text.IndexOf('<');
+                        var le = text.IndexOf('>');
+                        if (lb < 0 || le < 0 || lb == text.Length - 1)
+                            throw new Functions.ParseFaildException();
+                        var label = text.Slice(lb + 1, le - lb - 1).Trim();
+                        if (label[0] == '/') {
+                            if (labels.Any() && label.Slice(1).ToString() == labels.Peek()) {
+                                var content = text.Slice(0, lb).ToString();
+                                switch (labels.Pop()) {
+                                    case "p":
+                                        builder.AppendLine(content);
+                                        break;
+                                    case "strong":
+                                        builder.Append(content);
+                                        builder.Append("**");
+                                        break;
+                                    default:
+                                        Debug.WriteLine(label.ToString());
+                                        break;
+                                }
+                            } else
+                                Debug.WriteLine(label.ToString());
+                        } else {
+                            var l = label.ToString();
+                            switch (l) {
+                                case "p":
+                                    labels.Push(l);
+                                    builder.AppendLine();
+                                    break;
+                                case "strong":
+                                    labels.Push(l);
+                                    builder.Append(text.Slice(0, lb).ToString());
+                                    builder.Append("**");
+                                    break;
+                                case "hr":
+                                case "hr/":
+                                case "hr /":
+                                    builder.AppendLine();
+                                    builder.AppendLine("---");
+                                    break;
+                                default:
+                                    Debug.WriteLine(l);
+                                    break;
+                            }
+                        }
+                        text = text.Slice(le + 1);
+                    }
+
+                    return builder.ToString();
+                }
+                set {
+                    _description = value;
+                }
             }
         }
     }
